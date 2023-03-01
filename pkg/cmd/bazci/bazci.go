@@ -19,6 +19,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -32,6 +33,7 @@ import (
 	bes "github.com/cockroachdb/cockroach/pkg/build/bazel/bes"
 	bazelutil "github.com/cockroachdb/cockroach/pkg/build/util"
 	"github.com/cockroachdb/cockroach/pkg/cmd/bazci/githubpost"
+	"github.com/cockroachdb/cockroach/pkg/cmd/bazci/skiputil"
 	"github.com/cockroachdb/errors"
 	ptypes "github.com/gogo/protobuf/types"
 	"github.com/spf13/cobra"
@@ -65,6 +67,7 @@ var (
 	port                    int
 	artifactsDir            string
 	githubPostFormatterName string
+	skippedTests            map[skiputil.Test]bool
 
 	rootCmd = &cobra.Command{
 		Use:   "bazci",
@@ -282,6 +285,13 @@ func init() {
 		8998,
 		"port to run the bazci server on",
 	)
+	var err error
+	skippedTests, err = skiputil.GetSkippedTests()
+	if err != nil {
+		// Do not fail the run if we fail to get the list of skipped lists.
+		log.Println(err)
+	}
+	log.Println(skippedTests)
 }
 
 func getRunEnvForBeaverHub() string {
