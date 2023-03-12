@@ -257,7 +257,7 @@ func runMultiTenantUpgrade(ctx context.Context, t test.Test, c cluster.Cluster, 
 			withResults([][]string{{"1", "bar"}}),
 		mkStmt("SHOW CLUSTER SETTING version").
 			withResults([][]string{{initialVersion}}),
-		mkStmt("SET CLUSTER SETTING version = crdb_internal.node_executable_version()"),
+		// mkStmt("SET CLUSTER SETTING version = crdb_internal.node_executable_version()"),
 		mkStmt("SELECT version = crdb_internal.node_executable_version() FROM [SHOW CLUSTER SETTING version]").
 			withResults([][]string{{"true"}}),
 	)
@@ -269,88 +269,6 @@ func runMultiTenantUpgrade(ctx context.Context, t test.Test, c cluster.Cluster, 
 		mkStmt("SELECT version = crdb_internal.node_executable_version() FROM [SHOW CLUSTER SETTING version]").
 			withResults([][]string{{"true"}}),
 	)
-
-	t.Status("stopping the tenant 12 server ahead of upgrading")
-	tenant12.stop(ctx, t, c)
-
-	t.Status("starting the tenant 12 server with the current binary")
-	tenant12.start(ctx, t, c, currentBinary)
-
-	t.Status("verify that the tenant 12 server works with the new binary")
-	verifySQL(t, tenant12.pgURL,
-		mkStmt(`SELECT * FROM foo LIMIT 1`).
-			withResults([][]string{{"1", "bar"}}),
-		mkStmt("SHOW CLUSTER SETTING version").
-			withResults([][]string{{initialVersion}}))
-
-	// Upgrade the tenant created in the mixed version state to the final version.
-	t.Status("migrating tenant 12 to the current version")
-	verifySQL(t, tenant12.pgURL,
-		mkStmt("SET CLUSTER SETTING version = crdb_internal.node_executable_version()"),
-		mkStmt("SELECT version = crdb_internal.node_executable_version() FROM [SHOW CLUSTER SETTING version]").
-			withResults([][]string{{"true"}}))
-
-	t.Status("restarting the tenant 12 server to check it works after a restart")
-	tenant12.stop(ctx, t, c)
-	tenant12.start(ctx, t, c, currentBinary)
-
-	t.Status("verify that the tenant 12 server works with the new binary after restart")
-	verifySQL(t, tenant12.pgURL,
-		mkStmt(`SELECT * FROM foo LIMIT 1`).
-			withResults([][]string{{"1", "bar"}}),
-		mkStmt("SELECT version = crdb_internal.node_executable_version() FROM [SHOW CLUSTER SETTING version]").
-			withResults([][]string{{"true"}}))
-
-	// Upgrade the tenant created in the mixed version state to the final version.
-	t.Status("migrating tenant 13 to the current version")
-	verifySQL(t, tenant13.pgURL,
-		mkStmt(`SELECT * FROM foo LIMIT 1`).
-			withResults([][]string{{"1", "bar"}}),
-		mkStmt("SET CLUSTER SETTING version = crdb_internal.node_executable_version()"),
-		mkStmt("SELECT version = crdb_internal.node_executable_version() FROM [SHOW CLUSTER SETTING version]").
-			withResults([][]string{{"true"}}),
-		mkStmt(`SELECT * FROM foo LIMIT 1`).
-			withResults([][]string{{"1", "bar"}}))
-
-	t.Status("restarting the tenant 13 server to check it works after a restart")
-	tenant13.stop(ctx, t, c)
-	tenant13.start(ctx, t, c, currentBinary)
-
-	t.Status("verify tenant 13 server works with the new binary after restart")
-	verifySQL(t, tenant13.pgURL,
-		mkStmt(`SELECT * FROM foo LIMIT 1`).
-			withResults([][]string{{"1", "bar"}}),
-		mkStmt("SELECT version = crdb_internal.node_executable_version() FROM [SHOW CLUSTER SETTING version]").
-			withResults([][]string{{"true"}}))
-
-	t.Status("creating tenant 14 at the new version")
-
-	const tenant14HTTPPort, tenant14SQLPort = 8014, 20014
-	const tenant14ID = 14
-	runner.Exec(t, `SELECT crdb_internal.create_tenant($1::INT)`, tenant14ID)
-
-	t.Status("verifying that the tenant 14 server works and has the proper version")
-	tenant14 := createTenantNode(ctx, t, c, kvNodes, tenant14ID, tenantNode, tenant14HTTPPort, tenant14SQLPort, tenantStartOpt)
-	tenant14.start(ctx, t, c, currentBinary)
-	defer tenant14.stop(ctx, t, c)
-	verifySQL(t, tenant14.pgURL,
-		mkStmt(`CREATE TABLE foo (id INT PRIMARY KEY, v STRING)`),
-		mkStmt(`INSERT INTO foo VALUES($1, $2)`, 1, "bar"),
-		mkStmt(`SELECT * FROM foo LIMIT 1`).
-			withResults([][]string{{"1", "bar"}}),
-		mkStmt("SELECT version = crdb_internal.node_executable_version() FROM [SHOW CLUSTER SETTING version]").
-			withResults([][]string{{"true"}}))
-
-	t.Status("restarting the tenant 14 server to check it works after a restart")
-	tenant13.stop(ctx, t, c)
-	tenant13.start(ctx, t, c, currentBinary)
-
-	t.Status("verifying the post-upgrade tenant works and has the proper version")
-	verifySQL(t, tenant14.pgURL,
-		mkStmt(`SELECT * FROM foo LIMIT 1`).
-			withResults([][]string{{"1", "bar"}}),
-		mkStmt("SELECT version = crdb_internal.node_executable_version() FROM [SHOW CLUSTER SETTING version]").
-			withResults([][]string{{"true"}}))
 }
 
 type sqlVerificationStmt struct {

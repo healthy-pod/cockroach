@@ -765,7 +765,7 @@ func (s *SQLServerWrapper) PreStart(ctx context.Context) error {
 		return err
 	}
 
-	return nil
+	return s.startAttemptUpgrade(ctx)
 }
 
 func (s *SQLServerWrapper) serveConn(
