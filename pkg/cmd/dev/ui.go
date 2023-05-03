@@ -25,7 +25,8 @@ import (
 const (
 	// ossFlag is the name of the boolean long (GNU-style) flag that builds only
 	// the open-source parts of the UI.
-	ossFlag = "oss"
+	ossFlag             = "oss"
+	extraEslintArgsFlag = "extra-eslint-args"
 )
 
 // makeUICmd initializes the top-level 'ui' subcommand.
@@ -244,9 +245,17 @@ Replaces 'make ui-lint'.`,
 				return err
 			}
 
+			extraEslintArgs, err := cmd.Flags().GetString(extraEslintArgsFlag)
+			if err != nil {
+				return err
+			}
+
 			args := []string{
 				"test",
 				"//pkg/ui:lint",
+			}
+			if extraEslintArgs != "" {
+				args = append(args, "--with_eslint_args", fmt.Sprintf(`--define=eslint_args="%s"`, extraEslintArgs))
 			}
 			args = append(args,
 				d.getTestOutputArgs(
@@ -270,6 +279,7 @@ Replaces 'make ui-lint'.`,
 	}
 
 	lintCmd.Flags().Bool(verboseFlag, false, "show all linter output")
+	lintCmd.Flags().String(extraEslintArgsFlag, "", "extra args to pass to eslint")
 
 	return lintCmd
 }

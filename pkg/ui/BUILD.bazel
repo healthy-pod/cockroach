@@ -2,6 +2,7 @@ load("//build/bazelutil/unused_checker:unused.bzl", "get_x_data")
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@build_bazel_rules_nodejs//:index.bzl", "nodejs_binary")
 load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 
 go_library(
     name = "ui",
@@ -30,6 +31,18 @@ config_setting(
         ":with_ui_flag": "true",
     },
     visibility = ["//visibility:public"],
+)
+
+bool_flag(
+    name = "with_extra_eslint_args_flag",
+    build_setting_default = False,
+)
+
+config_setting(
+    name = "with_extra_eslint_args",
+    flag_values = {
+        ":with_extra_eslint_args_flag": "true",
+    },
 )
 
 genrule(

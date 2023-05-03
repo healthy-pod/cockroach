@@ -21,6 +21,7 @@ build --flag_alias=force_build_cdeps=//build/toolchains:force_build_cdeps_flag
 build --flag_alias=lintonbuild=//build/toolchains:nogo_flag
 build --flag_alias=nolintonbuild=//build/toolchains:nonogo_explicit_flag
 build --flag_alias=with_ui=//pkg/ui:with_ui_flag
+build --flag_alias=with_eslint_args=//pkg/ui:with_extra_eslint_args_flag
 
 build:crdb_test_off --crdb_test_off
 build:cross --cross

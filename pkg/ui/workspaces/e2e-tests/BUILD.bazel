@@ -9,6 +9,10 @@ exports_files(
 
 eslint_test(
     name = "lint",
+    args = select({
+        "//pkg/ui:with_extra_eslint_args": ["$(eslint_args)"],
+        "//conditions:default": [],
+    }),
     data = [
         ".eslintrc.json",
         "cypress",
