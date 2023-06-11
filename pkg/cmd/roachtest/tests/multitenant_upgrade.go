@@ -70,6 +70,14 @@ func registerMultiTenantUpgrade(r registry.Registry) {
 //   - Tenant14{Binary: Cur, Cluster: Cur}: Create tenant 14 and verify it works.
 //   - Tenant12{Binary: Cur, Cluster: Cur}: Restart tenant 14 and make sure it still works.
 func runMultiTenantUpgrade(ctx context.Context, t test.Test, c cluster.Cluster, v version.Version) {
+	releaseToMinSupportedVersion := map[string]string{
+		// Update this map with every new release.
+		"23.2": "22.2",
+	}
+	currentRelease := fmt.Sprintf("%d.%d", v.Major(), v.Minor())
+	if _, ok := releaseToMinSupportedVersion[currentRelease]; !ok {
+		t.Fatalf("minimum supported version for release %s not found - add it to releaseToMinSupportedVersion map", currentRelease)
+	}
 	predecessor, err := version.PredecessorVersion(v)
 	require.NoError(t, err)
 
@@ -193,7 +201,7 @@ func runMultiTenantUpgrade(ctx context.Context, t test.Test, c cluster.Cluster, 
 		mkStmt(`SELECT * FROM foo LIMIT 1`).
 			withResults([][]string{{"1", "bar"}}),
 		mkStmt("SHOW CLUSTER SETTING version").
-			withResults([][]string{{initialVersion}}),
+			withResults([][]string{{releaseToMinSupportedVersion[currentRelease]}}),
 	)
 
 	t.Status("stopping the first tenant 11 server ahead of upgrading")

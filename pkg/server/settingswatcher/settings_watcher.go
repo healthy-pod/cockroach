@@ -14,6 +14,7 @@ package settingswatcher
 
 import (
 	"context"
+	"time"
 
 	"github.com/cockroachdb/cockroach/pkg/clusterversion"
 	"github.com/cockroachdb/cockroach/pkg/keys"
@@ -354,6 +355,7 @@ func (s *SettingsWatcher) setDefaultLocked(ctx context.Context, key string) {
 // updateOverrides updates the overrides map and updates any settings
 // accordingly.
 func (s *SettingsWatcher) updateOverrides(ctx context.Context) {
+	time.Sleep(time.Second * 30)
 	newOverrides := s.overridesMonitor.Overrides()
 
 	s.mu.Lock()
@@ -437,7 +439,7 @@ func (s *SettingsWatcher) GetStorageClusterActiveVersion() clusterversion.Cluste
 		// settingswatcher, it means that the storage cluster has not yet been
 		// upgraded to 23.1. As a result, assume that storage cluster is at
 		// version 22.2.
-		storageClusterVersion := roachpb.Version{Major: 22, Minor: 2, Internal: 0}
+		storageClusterVersion := roachpb.Version{Major: 12, Minor: 1, Internal: 0}
 		return clusterversion.ClusterVersion{Version: storageClusterVersion}
 	}
 	return s.mu.storageClusterVersion
