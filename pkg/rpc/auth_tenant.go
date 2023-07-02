@@ -77,6 +77,9 @@ func (a tenantAuthorizer) authorize(
 	case "/cockroach.roachpb.Internal/TenantSettings":
 		return a.authTenantSettings(tenID, req.(*kvpb.TenantSettingsRequest))
 
+	case "/cockroach.roachpb.Internal/GetKVMetadata":
+		return nil // no restriction to usage of this endpoint by tenants
+
 	case "/cockroach.rpc.Heartbeat/Ping":
 		return nil // no restriction to usage of this endpoint by tenants
 

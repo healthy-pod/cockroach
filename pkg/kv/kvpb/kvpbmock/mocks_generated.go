@@ -78,6 +78,26 @@ func (mr *MockInternalClientMockRecorder) GetAllSystemSpanConfigsThatApply(arg0,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllSystemSpanConfigsThatApply", reflect.TypeOf((*MockInternalClient)(nil).GetAllSystemSpanConfigsThatApply), varargs...)
 }
 
+// GetKVMetadata mocks base method.
+func (m *MockInternalClient) GetKVMetadata(arg0 context.Context, arg1 *kvpb.GetKVMetadataRequest, arg2 ...grpc.CallOption) (*kvpb.GetKVMetadataResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{arg0, arg1}
+	for _, a := range arg2 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetKVMetadata", varargs...)
+	ret0, _ := ret[0].(*kvpb.GetKVMetadataResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetKVMetadata indicates an expected call of GetKVMetadata.
+func (mr *MockInternalClientMockRecorder) GetKVMetadata(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{arg0, arg1}, arg2...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetKVMetadata", reflect.TypeOf((*MockInternalClient)(nil).GetKVMetadata), varargs...)
+}
+
 // GetRangeDescriptors mocks base method.
 func (m *MockInternalClient) GetRangeDescriptors(arg0 context.Context, arg1 *kvpb.GetRangeDescriptorsRequest, arg2 ...grpc.CallOption) (kvpb.Internal_GetRangeDescriptorsClient, error) {
 	m.ctrl.T.Helper()

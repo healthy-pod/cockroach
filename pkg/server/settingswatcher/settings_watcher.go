@@ -462,6 +462,14 @@ func (s *SettingsWatcher) GetStorageClusterActiveVersion() clusterversion.Cluste
 // 'version' setting is not present in the system.settings table.
 var errVersionSettingNotFound = errors.New("got nil value for tenant cluster version row")
 
+// SetStorageClusterVersion sets the cached storage cluster version to the given
+// value.
+func (s *SettingsWatcher) SetStorageClusterVersion(v roachpb.Version) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.mu.storageClusterVersion = clusterversion.ClusterVersion{Version: v}
+}
+
 // GetClusterVersionFromStorage reads the cluster version from the storage via
 // the given transaction.
 func (s *SettingsWatcher) GetClusterVersionFromStorage(

@@ -2287,3 +2287,13 @@ func (n *Node) GetRangeDescriptors(
 		RangeDescriptors: rangeDescriptors,
 	})
 }
+
+func (n *Node) GetKVMetadata(
+	ctx context.Context, req *kvpb.GetKVMetadataRequest,
+) (*kvpb.GetKVMetadataResponse, error) {
+	storageClusterVersion := n.execCfg.Settings.Version.ActiveVersionOrEmpty(ctx).Version
+	if storageClusterVersion == (roachpb.Version{}) {
+		return &kvpb.GetKVMetadataResponse{}, errors.New("unexpected error: got empty storage cluster version")
+	}
+	return &kvpb.GetKVMetadataResponse{StorageClusterVersion: &storageClusterVersion}, nil
+}

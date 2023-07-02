@@ -124,6 +124,10 @@ type Connector interface {
 	// mixed version 21.2->22.1 state where the tenant has not yet configured
 	// its own zones.
 	config.SystemConfigProvider
+
+	// GetKVMetadata is used by tenants to obtain metadata about the KV layer such as
+	// storage cluster version.
+	GetKVMetadata(context.Context, *kvpb.GetKVMetadataRequest) (*kvpb.GetKVMetadataResponse, error)
 }
 
 // TokenBucketProvider supplies an endpoint (to tenants) for the TokenBucket API
@@ -1014,4 +1018,14 @@ func CombineKVAddresses(addressConfig KVAddressConfig) []string {
 		addrs = append(addrs, addressConfig.LoopbackAddress)
 	}
 	return addrs
+}
+
+func (c *connector) GetKVMetadata(
+	ctx context.Context, req *kvpb.GetKVMetadataRequest,
+) (resp *kvpb.GetKVMetadataResponse, retErr error) {
+	retErr = c.withClient(ctx, func(ctx context.Context, client *client) (err error) {
+		resp, err = client.GetKVMetadata(ctx, req)
+		return
+	})
+	return
 }

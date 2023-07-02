@@ -39,6 +39,7 @@ import (
 	"github.com/cockroachdb/cockroach/pkg/kv/kvclient/kvtenant"
 	"github.com/cockroachdb/cockroach/pkg/kv/kvclient/rangefeed"
 	"github.com/cockroachdb/cockroach/pkg/kv/kvclient/rangestats"
+	"github.com/cockroachdb/cockroach/pkg/kv/kvpb"
 	"github.com/cockroachdb/cockroach/pkg/kv/kvserver"
 	"github.com/cockroachdb/cockroach/pkg/kv/kvserver/kvserverbase"
 	"github.com/cockroachdb/cockroach/pkg/kv/kvserver/protectedts"
@@ -1433,6 +1434,14 @@ func (s *SQLServer) preStart(
 	if s.tenantConnect != nil {
 		if err := s.tenantConnect.Start(ctx); err != nil {
 			return err
+		}
+	}
+
+	if s.tenantConnect != nil {
+		if res, err := s.tenantConnect.GetKVMetadata(ctx, &kvpb.GetKVMetadataRequest{}); err != nil {
+			return err
+		} else {
+			s.settingsWatcher.SetStorageClusterVersion(*res.StorageClusterVersion)
 		}
 	}
 
