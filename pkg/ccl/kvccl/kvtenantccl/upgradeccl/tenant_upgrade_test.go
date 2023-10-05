@@ -21,10 +21,12 @@ import (
 	"github.com/cockroachdb/cockroach/pkg/server"
 	"github.com/cockroachdb/cockroach/pkg/settings/cluster"
 	"github.com/cockroachdb/cockroach/pkg/spanconfig"
+	"github.com/cockroachdb/cockroach/pkg/sql/sem/eval"
 	"github.com/cockroachdb/cockroach/pkg/sql/sqlinstance/instancestorage"
 	"github.com/cockroachdb/cockroach/pkg/sql/sqlliveness/slinstance"
 	"github.com/cockroachdb/cockroach/pkg/testutils/serverutils"
 	"github.com/cockroachdb/cockroach/pkg/testutils/sqlutils"
+	"github.com/cockroachdb/cockroach/pkg/testutils/testcluster"
 	"github.com/cockroachdb/cockroach/pkg/upgrade"
 	"github.com/cockroachdb/cockroach/pkg/upgrade/upgradebase"
 	"github.com/cockroachdb/cockroach/pkg/util/leaktest"
@@ -32,6 +34,105 @@ import (
 	"github.com/cockroachdb/cockroach/pkg/util/stop"
 	"github.com/stretchr/testify/require"
 )
+
+type testClusterWithHelpers struct {
+	*testing.T
+	*testcluster.TestCluster
+	args func() map[int]base.TestServerArgs
+}
+
+// Set up a mixed cluster with the following setup:
+// - len(versions) servers
+// - server[i] runs at binary version `versions[i][0]`
+// - server[i] runs with minimum supported version `versions[i][1]`
+func setupMixedCluster(
+	t *testing.T, knobs []base.TestingKnobs, versions [][2]string,
+) testClusterWithHelpers {
+
+	twh := testClusterWithHelpers{
+		T: t,
+		args: func() map[int]base.TestServerArgs {
+			serverArgsPerNode := map[int]base.TestServerArgs{}
+			for i, v := range versions {
+				v0, v1 := roachpb.MustParseVersion(v[0]), roachpb.MustParseVersion(v[1])
+				st := cluster.MakeTestingClusterSettingsWithVersions(v0, v1, false /* initializeVersion */)
+				args := base.TestServerArgs{
+					Settings: st,
+					Knobs:    knobs[i],
+				}
+				serverArgsPerNode[i] = args
+			}
+			return serverArgsPerNode
+		}}
+
+	tc := testcluster.StartTestCluster(t, len(versions), base.TestClusterArgs{
+		ReplicationMode:   base.ReplicationManual, // speeds up test
+		ServerArgsPerNode: twh.args(),
+	})
+
+	// We simulate crashes using this cluster, and having this enabled (which is
+	// a default upgrade) causes leaktest to complain.
+	if _, err := tc.ServerConn(0).Exec("SET CLUSTER SETTING diagnostics.reporting.enabled = 'false'"); err != nil {
+		t.Fatal(err)
+	}
+
+	twh.TestCluster = tc
+	return twh
+}
+
+func TestDebugTau(t *testing.T) {
+	defer leaktest.AfterTest(t)()
+	defer log.Scope(t).Close(t)
+	ctx := context.Background()
+
+	v1 := clusterversion.TestingBinaryVersion
+	// v0 is hard-coded because clusterversion.TestingBinaryMinSupportedVersion is `v22.2` at the
+	// time of typing and it does not support shared process tenants. We should update v0 to be
+	// clusterversion.TestingBinaryMinSupportedVersion when it is bumped to `v23.1`.
+	v0 := clusterversion.V23_1
+	versions := [][2]string{
+		{v0.String(), v0.String()},
+		{v1.String(), v0.String()},
+	}
+
+	knobs := []base.TestingKnobs{
+		base.TestingKnobs{
+			Server: &server.TestingKnobs{
+
+				DisableAutomaticVersionUpgrade:             make(chan struct{}),
+				BinaryVersionOverride:                      clusterversion.ByKey(v0),
+				PreventBinaryVersionOverrideFromFinalizing: true,
+				// BootstrapVersionKeyOverride:    clusterversion.BinaryVersionKey,
+			},
+			SQLEvalContext: &eval.TestingKnobs{
+				// When the host binary version is not equal to its cluster version, tenant logical version is set
+				// to the host's minimum supported binary version. We need this override to ensure that the tenant is
+				// created at v0.
+				TenantLogicalVersionKeyOverride: v0,
+			},
+		},
+		base.TestingKnobs{
+			Server: &server.TestingKnobs{
+				DisableAutomaticVersionUpgrade:             make(chan struct{}),
+				BinaryVersionOverride:                      v1,
+				BootstrapVersionKeyOverride:                clusterversion.BinaryVersionKey,
+				PreventBinaryVersionOverrideFromFinalizing: true,
+			},
+			SQLEvalContext: &eval.TestingKnobs{
+				// When the host binary version is not equal to its cluster version, tenant logical version is set
+				// to the host's minimum supported binary version. We need this override to ensure that the tenant is
+				// created at v0.
+				TenantLogicalVersionKeyOverride: v0,
+			},
+		},
+	}
+
+	// Create a mixed version cluster with 2 nodes where the first node is running v0 and the second
+	// node is running TestingBinaryVersion.
+	//
+	tc := setupMixedCluster(t, knobs, versions)
+	defer tc.Stopper().Stop(ctx)
+}
 
 // TestTenantUpgrade exercises the case where a system tenant is in a
 // non-finalized version state and creates a tenant. The test ensures

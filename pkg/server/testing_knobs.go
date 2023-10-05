@@ -100,6 +100,9 @@ type TestingKnobs struct {
 	// NB: When setting this, you probably also want to set
 	// DisableAutomaticVersionUpgrade.
 	BinaryVersionOverride roachpb.Version
+
+	// PreventBinaryVersionOverrideFromFinalizing
+	PreventBinaryVersionOverrideFromFinalizing bool
 	// An (additional) callback invoked whenever a
 	// node is permanently removed from the cluster.
 	OnDecommissionedCallback func(id roachpb.NodeID)

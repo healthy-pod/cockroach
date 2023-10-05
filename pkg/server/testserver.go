@@ -692,11 +692,13 @@ func (ts *testServer) Activate(ctx context.Context) error {
 	}
 
 	maybeRunVersionUpgrade := func(layer serverutils.ApplicationLayerInterface) error {
-		if v := ts.BinaryVersionOverride(); v != (roachpb.Version{}) {
-			ie := layer.InternalExecutor().(isql.Executor)
-			if _, err := ie.Exec(context.Background(), "set-cluster-version", nil, /* txn */
-				`SET CLUSTER SETTING version = $1`, v.String()); err != nil {
-				return err
+		if !ts.PreventBinaryVersionOverrideFromFinalizing() {
+			if v := ts.BinaryVersionOverride(); v != (roachpb.Version{}) {
+				ie := layer.InternalExecutor().(isql.Executor)
+				if _, err := ie.Exec(context.Background(), "set-cluster-version", nil, /* txn */
+					`SET CLUSTER SETTING version = $1`, v.String()); err != nil {
+					return err
+				}
 			}
 		}
 		return nil
@@ -2206,6 +2208,14 @@ func (ts *testServer) BinaryVersionOverride() roachpb.Version {
 		return roachpb.Version{}
 	}
 	return knobs.(*TestingKnobs).BinaryVersionOverride
+}
+
+func (ts *testServer) PreventBinaryVersionOverrideFromFinalizing() bool {
+	knobs := ts.TestingKnobs().Server
+	if knobs == nil {
+		return false
+	}
+	return knobs.(*TestingKnobs).PreventBinaryVersionOverrideFromFinalizing
 }
 
 // KvProber is part of the serverutils.StorageLayerInterface.

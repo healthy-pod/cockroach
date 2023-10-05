@@ -1672,10 +1672,10 @@ func (s *SQLServer) preStart(
 	// Prevent the server from starting if its minimum supported binary version is too high
 	// for the tenant cluster version.
 	if tenantActiveVersion.Version.Less(s.execCfg.Settings.Version.BinaryMinSupportedVersion()) {
-		return errors.WithHintf(errors.Newf("preventing SQL server from starting because its executable "+
-			"version is too new to run the current active logical version of the virtual cluster"),
-			"finalize the virtual cluster version to at least %v or downgrade the"+
-				"executable version to at most %v", s.execCfg.Settings.Version.BinaryMinSupportedVersion(), tenantActiveVersion.Version,
+		return errors.Newf("preventing SQL server from starting because its executable "+
+			"version is too new to run the current active logical version of the virtual cluster - "+
+			"finalize the virtual cluster version to at least %v or downgrade the "+
+			"executable version to at most %v", s.execCfg.Settings.Version.BinaryMinSupportedVersion(), tenantActiveVersion.Version,
 		)
 	}
 
